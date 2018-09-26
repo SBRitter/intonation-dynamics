@@ -9,3 +9,5 @@ How to make it work (on a Mac)
 3. Compile C++ code: ```g++ simulate.cpp -o simulate```
 
 4. Open R Script. Make sure working directory of R matches directory with compiled simulation program, i.e. the project directory if you didn't place the files somewhere else.
+
+5. Install required R dependencies if you do not have them already

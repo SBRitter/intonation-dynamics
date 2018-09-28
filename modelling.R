@@ -414,7 +414,7 @@ violin_real = ggplot(data = subset(onglide_data, !is.na(onglide_log)), aes(y = o
   geom_hline(yintercept = 0, linetype = 3) + 
   geom_violin(trim = F, scale = "count", bw = bandwidth) +
   ylim(-2, 2) +
-  labs(title = "", y = "log Onglide", x = "Focus Type") +
+  labs(title = "", y = "log Onglide", x = "") +
   guides(fill=F, color = F)
 
 # simulated data for all speakers 

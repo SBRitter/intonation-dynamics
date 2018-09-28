@@ -12,9 +12,6 @@ library(gridExtra)
 
 #### Preparation and presentation of the model ----
 
-# make sure you set the working directory to the directory where you placed the C++ simulation program
-#setwd("...")
-
 # variables for modelling + plotting
 x_lim = 2
 noise = 0.55 #1

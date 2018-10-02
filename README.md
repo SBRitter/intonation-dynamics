@@ -1,4 +1,4 @@
-# Software for manuscript "..."
+# Software for manuscript "The dynamics of intonation: categorical and continuous variation in an attractor-based model"
 
 This repository contains the software and data for the analyses and simulations of the manuscript "..." by Simon Ritter, Doris Mücke and Martine Grice. The software models the intonation data of the study, i.e. nuclear pitch accents characterised by tonal onglide, using a dynamic system with two attractors. The central piece of the repository is the R script which should also be the starting point to run the modelling. The actual simulations of the dynamic system are run by the C++ program that gets called by the R script. The onglide data of 27 native German speakers are stored in the csv files.
 

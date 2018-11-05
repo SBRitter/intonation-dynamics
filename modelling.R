@@ -1,4 +1,5 @@
-# Script belonging to the manuscript "..." by Simon Ritter, Doris M??cke and Martine Grice
+# Script belonging to the manuscript "The dynamics of intonation: categorical and continuous variation in an attractor-based model" 
+# by Simon Ritter, Doris Muecke and Martine Grice
 # All plots and simulations in the paper are done with this script,
 # The actual simulations are done by calling an external program
 # (the "R working directory" may have to be set in order point to the directory of the simulation program).

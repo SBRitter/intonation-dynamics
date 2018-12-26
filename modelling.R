@@ -15,7 +15,7 @@ library(gridExtra)
 
 # variables for modelling + plotting
 x_lim = 2
-noise = 0.55 #1
+noise = 0.55 #0.55
 green = "#18d295"
 purple = "#b37ce3"
 red = "#ff5c5c"
@@ -201,37 +201,55 @@ grid.arrange(potential4, potential3b,
 
 #### Modelling I: All speakers ----
 
+k = seq(-5,10,0.1)
+ratio = c()
+median = c()
+simulated_onglide=c()
+for(i in k) {
+  current_ratios = c()
+  current_medians = c()
+  for(j in 1:10) {
+    simulation = as.numeric(system(paste("./simulate", i, noise, x_lim, sep = " "), intern = T))
+    current_ratios = c(current_ratios, length(simulation[simulation < 0]) / length(simulation))
+    current_medians = c(current_medians, median(simulation[simulation > 0], na.rm = T))
+    simulated_onglide=c(simulated_onglide, simulation)
+  }
+  ratio = c(ratio, mean(current_ratios))
+  median = c(median, mean(current_medians, na.rm=T))
+}
+simulation_metrics = data.frame(k, ratio, median)
+simulated_data = data.frame(rep(k, each=length(simulation)*10), simulated_onglide)
+colnames(simulated_data)[1] = "k"
+
 # function to find the best fitting k value usind the ratio of falling accents
 find_k_count_ratio = function(real_data, noise, x_lim, k_candidates) {
-  tested_k = c()
   real_data = real_data[!is.na(real_data)]
   fall_ratio_real = length(real_data[real_data < 0]) / length(real_data)
   distances_for_ks = c()
   for (potential_k in k_candidates) {
-    tested_k = c(tested_k, potential_k)
-    sim_result = as.numeric(system(paste("./simulate", potential_k, noise, x_lim, sep = " "), intern = T))
-    fall_ratio_sim = length(sim_result[sim_result < 0]) / length(sim_result)
+    #sim_result = as.numeric(system(paste("./simulate", potential_k, noise, x_lim, sep = " "), intern = T))
+    #fall_ratio_sim = length(sim_result[sim_result < 0]) / length(sim_result)
+    fall_ratio_sim = simulation_metrics[simulation_metrics$k==potential_k,]$ratio
     distance_for_k = abs(fall_ratio_real - fall_ratio_sim)
     distances_for_ks = c(distances_for_ks, distance_for_k)
   }
-  results = data.frame(tested_k, distances_for_ks)
+  results = data.frame(k_candidates, distances_for_ks)
   return(results)
 }
 
 # function to find the best fitting k value using median
 find_k_median = function(real_data, noise, x_lim, k_candidates) {
-  tested_k = c()
   real_data = real_data[!is.na(real_data)]
   median_real = median(real_data[real_data > 0], na.rm = T)
   distances_for_ks = c()
   for (potential_k in k_candidates) {
-    tested_k = c(tested_k, potential_k)
-    sim_result = as.numeric(system(paste("./simulate", potential_k, noise, x_lim, sep = " "), intern = T))
-    median_sim = median(sim_result[sim_result > 0], na.rm = T)
+    #sim_result = as.numeric(system(paste("./simulate", potential_k, noise, x_lim, sep = " "), intern = T))
+    #median_sim = median(sim_result[sim_result > 0], na.rm = T)
+    median_sim = simulation_metrics[simulation_metrics$k==potential_k,]$median
     distance_for_k = abs(median_real - median_sim)
     distances_for_ks = c(distances_for_ks, distance_for_k)
   }
-  results = data.frame(tested_k, distances_for_ks)
+  results = data.frame(k_candidates, distances_for_ks)
   return(results)
 }
 
@@ -239,16 +257,16 @@ find_k_count_and_median = function(real_data, noise, x_lim, k_candidates) {
   results_count = find_k_count_ratio(real_data, noise, x_lim, k_candidates)
   results_median = find_k_median(real_data, noise, x_lim, k_candidates)
   par(mfrow=c(2,2))
-  distances_for_ks = results_count + results_median
-  tested_k = results_count$tested_k
+  distances_for_ks = results_count*2 + results_median
+  tested_k = results_count$k_candidates
   results = data.frame(tested_k, distances_for_ks)
   return(results)
 }
 
 # find the best fitting k
-tested_broad_ks = find_k_count_and_median(onglide_data_br_log, noise, x_lim, seq(-2, 2, .1))
-tested_narrow_ks = find_k_count_and_median(onglide_data_na_log, noise, x_lim, seq(1, 5, .1))
-tested_contrastive_ks = find_k_count_and_median(onglide_data_co_log, noise, x_lim, seq(3, 7, .1))
+tested_broad_ks = find_k_count_and_median(onglide_data_br_log, noise, x_lim, seq(-5, 10, .1))
+tested_narrow_ks = find_k_count_and_median(onglide_data_na_log, noise, x_lim, seq(-5, 10, .1))
+tested_contrastive_ks = find_k_count_and_median(onglide_data_co_log, noise, x_lim, seq(-5, 10, .1))
 
 broad_k = tested_broad_ks[which(tested_broad_ks$distances_for_ks == min(tested_broad_ks$distances_for_ks)),]$tested_k
 narrow_k = tested_narrow_ks[which(tested_narrow_ks$distances_for_ks == min(tested_narrow_ks$distances_for_ks)),]$tested_k
@@ -266,9 +284,12 @@ lines(tested_contrastive_ks$tested_k, tested_contrastive_ks$distances_for_ks)
 abline(v = contrastive_k, lty = 2)
 
 # simulate the data
-sim_sols_br = as.numeric(system(paste("./simulate", broad_k, noise, x_lim, sep = " "), intern = T))
-sim_sols_na = as.numeric(system(paste("./simulate", narrow_k, noise, x_lim, sep = " "), intern = T))
-sim_sols_co = as.numeric(system(paste("./simulate", contrastive_k, noise, x_lim, sep = " "), intern = T))
+#sim_sols_br = as.numeric(system(paste("./simulate", broad_k, noise, x_lim, sep = " "), intern = T))
+#sim_sols_na = as.numeric(system(paste("./simulate", narrow_k, noise, x_lim, sep = " "), intern = T))
+#sim_sols_co = as.numeric(system(paste("./simulate", contrastive_k, noise, x_lim, sep = " "), intern = T))
+sim_sols_br = simulated_data[simulated_data$k==broad_k,]$simulated_onglide
+sim_sols_na = simulated_data[simulated_data$k==narrow_k,]$simulated_onglide
+sim_sols_co = simulated_data[simulated_data$k==contrastive_k,]$simulated_onglide
 
 focus_type = c(rep("broad", length(sim_sols_br)),
                rep("narrow", length(sim_sols_na)),
@@ -297,17 +318,29 @@ group1 = c()
 group2 = c()
 
 # separate groups
+# for (speaker in unique(onglide_data$speaker)) {
+#   falls_broad = sum(onglide_data[onglide_data$speaker == speaker & onglide_data$focus_type == "broad", ]$onglide < 0, na.rm=T)
+#   rises_broad = sum(onglide_data[onglide_data$speaker == speaker & onglide_data$focus_type == "broad", ]$onglide >= 0, na.rm=T)
+#   if (falls_broad > rises_broad) {
+#     group1 = c(group1, speaker)
+#   } else if (falls_broad == rises_broad) {
+#     message(speaker, ": EQUAL RISES AND FALLS IN BROAD")
+#   } else {
+#     group2 = c(group2, speaker)
+#   }
+# }
 for (speaker in unique(onglide_data$speaker)) {
-  falls_broad = sum(onglide_data[onglide_data$speaker == speaker & onglide_data$focus_type == "broad", ]$onglide < 0, na.rm=T)
-  rises_broad = sum(onglide_data[onglide_data$speaker == speaker & onglide_data$focus_type == "broad", ]$onglide >= 0, na.rm=T)
-  if (falls_broad > rises_broad) {
+  falls = sum(onglide_data[onglide_data$speaker == speaker, ]$onglide < 0, na.rm=T)
+  all = nrow(onglide_data[onglide_data$speaker == speaker,])
+  threshold = all*0.33
+  if (falls > threshold) {
     group1 = c(group1, speaker)
-  } else if (falls_broad == rises_broad) {
-    message(speaker, ": EQUAL RISES AND FALLS IN BROAD")
   } else {
     group2 = c(group2, speaker)
   }
 }
+
+#group1=group1[group1!="CS_94"] #& group1!="FK_92"]
 
 # arrage data for group 1
 onglide_data_br_log_gr1 = onglide_data[onglide_data$focus_type == "broad" & onglide_data$speaker %in% group1, ]$onglide_log
@@ -322,28 +355,34 @@ onglide_data_co_log_gr2 = onglide_data[onglide_data$focus_type == "contrastive" 
 onglide_data_gr2 = subset(onglide_data, onglide_data$speaker %in% group2)
 
 # find the best fitting k for both groups
-tested_broad_ks_gr1 = find_k_count_and_median(onglide_data_br_log_gr1, noise, x_lim, seq(-6, 0, .1))
-tested_narrow_ks_gr1 = find_k_count_and_median(onglide_data_na_log_gr1, noise, x_lim, seq(0, 4, .1))
-tested_contrastive_ks_gr1 = find_k_count_and_median(onglide_data_co_log_gr1, noise, x_lim, seq(2, 7, .1))
+tested_broad_ks_gr1 = find_k_count_and_median(onglide_data_br_log_gr1, noise, x_lim, seq(-5, 10, .1))
+tested_narrow_ks_gr1 = find_k_count_and_median(onglide_data_na_log_gr1, noise, x_lim, seq(-5, 10, .1))
+tested_contrastive_ks_gr1 = find_k_count_and_median(onglide_data_co_log_gr1, noise, x_lim,  seq(-5, 10, .1))
 broad_k_gr1 = tested_broad_ks_gr1[which(tested_broad_ks_gr1$distances_for_ks == min(tested_broad_ks_gr1$distances_for_ks)),]$tested_k
 narrow_k_gr1 = tested_narrow_ks_gr1[which(tested_narrow_ks_gr1$distances_for_ks == min(tested_narrow_ks_gr1$distances_for_ks)),]$tested_k
 contrastive_k_gr1 = tested_contrastive_ks_gr1[which(tested_contrastive_ks_gr1$distances_for_ks == min(tested_contrastive_ks_gr1$distances_for_ks)),]$tested_k
 
-tested_broad_ks_gr2 = find_k_count_and_median(onglide_data_br_log_gr2, noise, x_lim, seq(2, 7, .1))
-tested_narrow_ks_gr2 = find_k_count_and_median(onglide_data_na_log_gr2, noise, x_lim, seq(5, 8, .1))
-tested_contrastive_ks_gr2 = find_k_count_and_median(onglide_data_co_log_gr2, noise, x_lim, seq(7, 9, .1))
+tested_broad_ks_gr2 = find_k_count_and_median(onglide_data_br_log_gr2, noise, x_lim, seq(-5, 10, .1))
+tested_narrow_ks_gr2 = find_k_count_and_median(onglide_data_na_log_gr2, noise, x_lim, seq(-5, 10, .1))
+tested_contrastive_ks_gr2 = find_k_count_and_median(onglide_data_co_log_gr2, noise, x_lim, seq(-5, 10, .1))
 broad_k_gr2 = tested_broad_ks_gr2[which(tested_broad_ks_gr2$distances_for_ks == min(tested_broad_ks_gr2$distances_for_ks)),]$tested_k
 narrow_k_gr2 = tested_narrow_ks_gr2[which(tested_narrow_ks_gr2$distances_for_ks == min(tested_narrow_ks_gr2$distances_for_ks)),]$tested_k
 contrastive_k_gr2 = tested_contrastive_ks_gr2[which(tested_contrastive_ks_gr2$distances_for_ks == min(tested_contrastive_ks_gr2$distances_for_ks)),]$tested_k
 
 # simulate the data for both groups
-sim_sols_br_gr1 = as.numeric(system(paste("./simulate", broad_k_gr1, noise, x_lim, sep = " "), intern = T))
-sim_sols_na_gr1 = as.numeric(system(paste("./simulate", narrow_k_gr1, noise, x_lim, sep = " "), intern = T))
-sim_sols_co_gr1 = as.numeric(system(paste("./simulate", contrastive_k_gr1, noise, x_lim, sep = " "), intern = T))
+#sim_sols_br_gr1 = as.numeric(system(paste("./simulate", broad_k_gr1, noise, x_lim, sep = " "), intern = T))
+#sim_sols_na_gr1 = as.numeric(system(paste("./simulate", narrow_k_gr1, noise, x_lim, sep = " "), intern = T))
+#sim_sols_co_gr1 = as.numeric(system(paste("./simulate", contrastive_k_gr1, noise, x_lim, sep = " "), intern = T))
+sim_sols_br_gr1 = simulated_data[simulated_data$k==broad_k_gr1,]$simulated_onglide
+sim_sols_na_gr1 = simulated_data[simulated_data$k==narrow_k_gr1,]$simulated_onglide
+sim_sols_co_gr1 = simulated_data[simulated_data$k==contrastive_k_gr1,]$simulated_onglide
 
-sim_sols_br_gr2 = as.numeric(system(paste("./simulate", broad_k_gr2, noise, x_lim, sep = " "), intern = T))
-sim_sols_na_gr2 = as.numeric(system(paste("./simulate", narrow_k_gr2, noise, x_lim, sep = " "), intern = T))
-sim_sols_co_gr2 = as.numeric(system(paste("./simulate", contrastive_k_gr2, noise, x_lim, sep = " "), intern = T))
+#sim_sols_br_gr2 = as.numeric(system(paste("./simulate", broad_k_gr2, noise, x_lim, sep = " "), intern = T))
+#sim_sols_na_gr2 = as.numeric(system(paste("./simulate", narrow_k_gr2, noise, x_lim, sep = " "), intern = T))
+#sim_sols_co_gr2 = as.numeric(system(paste("./simulate", contrastive_k_gr2, noise, x_lim, sep = " "), intern = T))
+sim_sols_br_gr2 = simulated_data[simulated_data$k==broad_k_gr2,]$simulated_onglide
+sim_sols_na_gr2 = simulated_data[simulated_data$k==narrow_k_gr2,]$simulated_onglide
+sim_sols_co_gr2 = simulated_data[simulated_data$k==contrastive_k_gr2,]$simulated_onglide
 
 # put them in a data frame
 focus_type = c(rep("broad", length(sim_sols_br)),
@@ -430,7 +469,7 @@ violin_sim = ggplot(data = subset(onglide_simulation, !is.na(simulated_onglide))
   labs(title = "", y = "Simulated Onglide", x = "") +
   guides(fill=FALSE) +
   theme(
-    plot.margin = unit(c(-10, 5.5, 5.5, 5.5), "pt")
+    #plot.margin = unit(c(-10, 5.5, 5.5, 5.5), "pt")
   )
 
 # function that returns a potential energy curve
@@ -575,6 +614,85 @@ medians_groups_sim = ggplot(data = subset(medians_group, Group != "All" & Type =
   theme(legend.title = element_blank())
 medians_groups_sim
 
+# medians group1 (sim and real)
+medians_group1 = ggplot(data = subset(medians_group, Group == "Group1"), aes(y = median, x = focus_type, group = Type)) +
+  coord_flip() +
+  theme_parameters +
+  geom_line(color = "black", size = 0.5) +
+  geom_point(size = 2, aes(shape = Type)) +
+  ylim(0.2, 0.8) +
+  labs(title = "", y = "log Onglide", x = "") +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "none")
+
+# medians group2 (sim and real)
+medians_group2 = ggplot(data = subset(medians_group, Group == "Group2"), aes(y = median, x = focus_type, group = Type)) +
+  coord_flip() +
+  theme_parameters +
+  geom_line(color = "black", size = 0.5) +
+  geom_point(size = 2, aes(shape = Type)) +
+  ylim(0.2, 0.8) +
+  labs(title = "", y = "log Onglide", x = "") +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "none")
+
+# medians group1 (sim and real) bar
+medians_group1 = ggplot(data = subset(medians_group, Group == "Group1"), aes(y = median, x = focus_type, group = Type)) +
+  coord_flip() +
+  theme_parameters +
+  geom_bar(stat="identity", position="dodge", color="#000000", fill="#AAAAAA") +
+  labs(title = "", y = "log Onglide", x = "") +
+  facet_wrap(.~Type) +
+  scale_y_continuous(limits=c(0,0.7))
+
+# medians group2 (sim and real) bar
+medians_group2 = ggplot(data = subset(medians_group, Group == "Group2"), aes(y = median, x = focus_type, group=Type)) +
+  coord_flip() +
+  theme_parameters +
+  geom_bar(stat="identity", position="dodge", color="#000000", fill="#AAAAAA") +
+  labs(title = "", y = "log Onglide", x = "") +
+  theme(legend.title = element_blank()) +
+  facet_wrap(.~Type) +
+  scale_y_continuous(limits=c(0,0.7))
+
+# medians_all_comp = ggplot(data = subset(medians_group, Group=="All"), aes(y = median, x = focus_type, group = interaction(Type, Group))) +
+#   coord_flip() +
+#   theme_parameters +
+#   geom_line(color = "black", size = 0.5) +
+#   geom_point(size = 2, aes(shape=Type)) +
+#   ylim(0.2, 0.8) +
+#   labs(title = "", y = "log Onglide", x = "")
+
+# bar
+medians_all_comp = ggplot(data = subset(medians_group, Group=="All"), aes(y = median, x = focus_type, group = interaction(Type, Group))) +
+  coord_flip() +
+  theme_parameters +
+  geom_bar(stat="identity", position="dodge", color="#000000", fill="#AAAAAA") +
+  labs(title = "", y = "log Onglide", x = "") +
+  facet_wrap(.~Type) +
+  scale_y_continuous(limits=c(0,0.7))
+
+grid.arrange(medians_groups_real, medians_groups_sim)
+
+grid.arrange(medians_all_comp, violin_real, violin_sim,
+             medians_group1, violin_gr1, violin_gr1_sim,
+             medians_group2, violin_gr2, violin_gr2_sim,
+             nrow=3)
+
+grid.arrange(medians_all_comp,
+             violin_real,
+             violin_sim)
+
+ggplot(data = subset(medians_group, Group != "All"), aes(y = median, x = focus_type, group=Group)) +
+  scale_fill_grey() +
+  coord_flip() +
+  theme_parameters +
+  geom_bar(stat="identity", position="dodge", aes(fill=Group)) +
+  labs(title = "", y = "log Onglide", x = "") +
+  theme(legend.title = element_blank()) +
+  facet_wrap(~Type)
+
+
 # Overview/comparisons of k values for groups (format 5:3)
 k = c(broad_k_gr1, narrow_k_gr1, contrastive_k_gr1, broad_k_gr2, narrow_k_gr2, contrastive_k_gr2)
 focus_type = rep(c("broad", "narrow", "contrastive"), 2)
@@ -607,3 +725,4 @@ axis(side = 1, at = seq(-2,2,1))
 axis(side = 2, at = seq(-4,4,2))
 abline(v=0, lwd = 0.5)
 abline(h=0, lwd = 0.5)
+

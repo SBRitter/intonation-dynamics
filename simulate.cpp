@@ -6,7 +6,7 @@
 
 /* Simulates two attractor dynamic system
  *
- * Code inspired by code by A. I. Gafos
+ * Code inspired by code of A. I. Gafos
  * http://www.ling.uni-potsdam.de/~gafos/code/inc_neut.m
  *
  * Author: Simon Ritter
@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   double xlim;
   double t = 10;
   int N = 10000;
-  int n = 1000;
+  int n = 2500;
   double dt = t / (double)N;
   double dX[N];
   double X[n];

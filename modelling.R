@@ -351,7 +351,7 @@ broad_k_gr2 = tested_broad_ks_gr2[which(tested_broad_ks_gr2$distances_for_ks == 
 narrow_k_gr2 = tested_narrow_ks_gr2[which(tested_narrow_ks_gr2$distances_for_ks == min(tested_narrow_ks_gr2$distances_for_ks)),]$tested_k
 contrastive_k_gr2 = tested_contrastive_ks_gr2[which(tested_contrastive_ks_gr2$distances_for_ks == min(tested_contrastive_ks_gr2$distances_for_ks)),]$tested_k
 
-tiff (filename='figures/S1Fig.tiff', width=6, height=6, units="in", pointsize=12, res=250)
+tiff (filename='figures/S1_Fig.tiff', width=6, height=6, units="in", pointsize=12, res=250)
 par(mfrow=c(3,3))
 plot(tested_broad_ks$tested_k, tested_broad_ks$distances_for_ks, pch = 15, ylim = c(0,3), ylab="Distance", xlab = "k", main = "broad, all", cex=0.5)
 lines(tested_broad_ks$tested_k, tested_broad_ks$distances_for_ks)
